@@ -7,6 +7,7 @@ pub enum CustomError {
     PathNotFount,
     IoError,
     CreateFail(&'static str),
+    ParseError(&'static str),
 }
 
 impl Display for CustomError {
@@ -15,6 +16,7 @@ impl Display for CustomError {
             PathNotFount => write!(f, "配置文件地址找不到"),
             IoError => write!(f, "io 读取错误"),
             CreateFail(p) => write!(f, "配置文件创建失败,文件地址：{}", p),
+            ParseError(s) => write!(f, "解析错误，错误原因:{}", s),
         }
     }
 }

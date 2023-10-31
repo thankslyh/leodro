@@ -1,23 +1,23 @@
 use crate::git_auto::error::CustomError;
-use std::fmt::{format, Pointer};
-use std::fs;
+use regex::Regex;
 use std::fs::File;
 use std::io::{stdin, Read, Write};
 use std::path::PathBuf;
+use std::{env, fs};
 
 const CONFIG_ADDR: &'static str = ".git_auto/conf.toml";
+const GIT_ADDR: &'static str = ".git/config";
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Config {
     pub token: String,
     pub git_prefix: String,
+    pub address: String,
+    pub proj_name: String,
 }
 impl Config {
     pub fn new() -> Self {
-        Config {
-            token: "".to_string(),
-            git_prefix: "".to_string(),
-        }
+        Config::default()
     }
     pub fn read_config(&mut self) -> Result<(), CustomError> {
         let path = Config::get_conf_addr().map_err(|_| CustomError::PathNotFount)?;
@@ -38,18 +38,14 @@ impl Config {
                 panic!("")
             }
         };
+        self.address = path.to_str().unwrap().to_string();
         let mut file = File::open(&path).map_err(|_| CustomError::IoError)?;
         let mut content = String::new();
         file.read_to_string(&mut content)
             .map_err(|_| CustomError::IoError)?;
-        let res = Config::parse(&content)?;
-        self.token = res.token;
-        self.git_prefix = res.git_prefix;
+        self.parse(&content)?;
         Ok(())
     }
-    // fn create_file(path: &PathBuf) -> Result<(), CustomError> {
-    //     let file = File::create(path);
-    // }
     fn check_url(address: &PathBuf) -> Result<(), CustomError> {
         let meta = fs::metadata(address);
         if meta.is_ok() {
@@ -66,7 +62,8 @@ impl Config {
         Ok(address)
     }
 
-    fn parse(content: &str) -> Result<Config, CustomError> {
+    fn parse(&mut self, content: &str) -> Result<(), CustomError> {
+        self.parse_git();
         let res = match content.parse::<toml::Value>() {
             Ok(toml::Value::Table(table)) => table,
             Ok(val) => {
@@ -75,7 +72,10 @@ impl Config {
                 panic!("{}", err);
             }
             Err(e) => {
-                panic!("{}", e)
+                panic!(
+                    "toml 解析错误，配置文件地址：{}下查看 toml 的内容格式是否正确\n错误信息：{}",
+                    self.address, e
+                )
             }
         };
         if let Some(config) = res.get("config").cloned() {
@@ -86,9 +86,32 @@ impl Config {
                 .as_str()
                 .unwrap()
                 .to_string();
-            return Ok(Config { token, git_prefix });
+            self.token = token;
+            self.git_prefix = git_prefix;
+            return Ok(());
         }
-        Err(CustomError::IoError)
+        Err(CustomError::ParseError("toml获取config为 None"))
+    }
+
+    pub fn parse_git(&mut self) {
+        let dir = env::current_dir().unwrap();
+        let dir = dir.join(GIT_ADDR);
+        let mut f = match File::open(dir) {
+            Ok(f) => f,
+            Err(e) => panic!("从.git中解析项目错误，错误信息：{}", e),
+        };
+        let mut content = String::new();
+        f.read_to_string(&mut content).unwrap();
+        let re = Regex::new(r"/([^/]+)\.git").unwrap();
+        let ca = match re.captures(content.as_str()) {
+            Some(ca) => ca,
+            None => panic!("从.git中解析项目错误"),
+        };
+        let repo_name = match ca.get(1) {
+            Some(re) => re,
+            None => panic!("从.git中解析项目错误"),
+        };
+        self.proj_name = repo_name.as_str().to_string();
     }
 
     fn gen_toml(path: &PathBuf) -> Result<(), CustomError> {
@@ -114,7 +137,6 @@ impl Config {
                 break;
             }
         }
-        // println!("token={} prefix={}", token.trim(), prefix.trim());
         let content = format!(
             "[config]\r\ntoken = \"{}\"\r\ngit_prefix = \"{}\"",
             token.trim(),
@@ -123,5 +145,17 @@ impl Config {
         f.write(&content.as_bytes())
             .map_err(|_| CustomError::PathNotFount)?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::Config;
+    use std::env;
+
+    #[test]
+    fn test_dir() {
+        let mut conf = Config::new();
+        conf.parse_git();
     }
 }
