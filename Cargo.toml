@@ -1,0 +1,19 @@
+[package]
+name = "thankslyh-toml"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "thankslyh-toml"
+path = "bin/main.rs"
+
+[dependencies]
+dirs = "5.0.1"
+num_cpus = "1.16.0"
+reqwest = {version = "0.11.22", features = ["json"]}
+serde = {version = "1.0.188", features = ["derive"]}
+#serde_json = "1.0.107"
+tokio = {version = "1.33.0", features = ["full"]}
+tokio-macros = "2.1.0"
+toml = "0.8.2"
