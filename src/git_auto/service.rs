@@ -38,7 +38,6 @@ pub async fn new_feature<'a>(
         )
         .await?;
     let first = r.iter().find(|p| p.name.eq(proj_name)).unwrap();
-    println!("找到的项目信息:{:#?}", first);
     let tmp_title = "title=".to_owned() + title;
     let query = Some(tmp_title.as_str());
     println!("开始创建 issue");
@@ -62,13 +61,12 @@ pub async fn new_feature<'a>(
     )
     .await?;
     println!("分支已创建成功，分支名{}", tmp_branch);
-    let origin_branch = format!("origin/{}", tmp_branch);
     Command::new("git")
         .arg("fetch")
         .output()
         .expect("命令执行错误，请手动拉取分支");
     Command::new("git")
-        .args(["checkout", "-b", &origin_branch])
+        .args(["checkout", &tmp_branch])
         .output()
         .expect("分支切换错误，请手动切换");
     Ok(())
