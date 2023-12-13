@@ -1,6 +1,8 @@
 use crate::GitRequestClient;
 use reqwest::Method;
 use serde::Deserialize;
+use spinners::Spinner;
+use spinners::Spinners::SoccerHeader;
 use std::process::Command;
 
 #[derive(Debug, Deserialize)]
@@ -28,7 +30,7 @@ pub async fn new_feature<'a>(
     proj_name: &str,
     title: &str,
 ) -> ServiceResult {
-    println!("根据项目名 {} 查找项目中...", proj_name);
+    let mut sp = Spinner::new(SoccerHeader, format!("项目名 {} 创建 branch 中", proj_name));
     let r = c
         .request::<Vec<Project>>(
             Method::GET,
@@ -40,7 +42,6 @@ pub async fn new_feature<'a>(
     let first = r.iter().find(|p| p.name.eq(proj_name)).unwrap();
     let tmp_title = "title=".to_owned() + title;
     let query = Some(tmp_title.as_str());
-    println!("开始创建 issue");
     let i = c
         .request::<Issue>(
             Method::POST,
@@ -52,7 +53,6 @@ pub async fn new_feature<'a>(
     let tmp_branch = format!("issue#{}", i.iid);
     let branch = format!("ref=master&branch={}", tmp_branch);
     let branch = Some(branch.as_str());
-    println!("开始创建 分支");
     c.request::<Branch>(
         Method::POST,
         &format!("/api/v4/projects/{}/repository/branches", first.id),
@@ -60,7 +60,6 @@ pub async fn new_feature<'a>(
         None,
     )
     .await?;
-    println!("分支已创建成功，分支名{}", tmp_branch);
     Command::new("git")
         .arg("fetch")
         .output()
@@ -69,10 +68,13 @@ pub async fn new_feature<'a>(
         .args(["checkout", &tmp_branch])
         .output()
         .expect("分支切换错误，请手动切换");
+    sp.stop_with_newline();
+    println!("分支已创建成功，分支名{}", tmp_branch);
     Ok(())
 }
 
 pub async fn issues<'a>(c: &'a mut GitRequestClient<'a>, proj_name: &str) -> ServiceResult {
+    let mut sp = Spinner::new(SoccerHeader, format!("项目名 {} 查找 issues 中", proj_name));
     let r = c
         .request::<Vec<Project>>(
             Method::GET,
@@ -90,6 +92,7 @@ pub async fn issues<'a>(c: &'a mut GitRequestClient<'a>, proj_name: &str) -> Ser
             None,
         )
         .await?;
+    sp.stop_with_newline();
     println!("issue_id    title                          description\r\n");
     list.iter().for_each(|v| {
         println!(

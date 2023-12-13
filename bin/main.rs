@@ -24,7 +24,11 @@ async fn main() -> leodro::service::ServiceResult {
 #[cfg(test)]
 mod tests {
     use reqwest::Url;
+    use spinners::Spinner;
+    use spinners::Spinners::SoccerHeader;
     use std::env;
+    use std::thread::sleep;
+    use std::time::Duration;
 
     #[test]
     fn test_url() {
@@ -33,5 +37,12 @@ mod tests {
         if let Ok(url) = url {
             println!("{}", url)
         }
+    }
+
+    #[test]
+    fn test_spinner() {
+        let mut sp = Spinner::new(SoccerHeader, "".to_string());
+        sleep(Duration::from_secs(5));
+        sp.stop();
     }
 }
