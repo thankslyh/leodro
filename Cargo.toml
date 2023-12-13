@@ -18,3 +18,4 @@ tokio = {version = "1.33.0", features = ["full"]}
 tokio-macros = "2.1.0"
 toml = "0.8.2"
 regex = "1.10.2"
+indicatif = "0.17.7"

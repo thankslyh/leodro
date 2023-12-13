@@ -1,10 +1,13 @@
 use crate::GitRequestClient;
 use reqwest::Method;
 use serde::Deserialize;
+use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 struct Project {
     pub id: u32,
+    pub name: String,
+    pub web_url: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -25,6 +28,7 @@ pub async fn new_feature<'a>(
     proj_name: &str,
     title: &str,
 ) -> ServiceResult {
+    println!("根据项目名 {} 查找项目中...", proj_name);
     let r = c
         .request::<Vec<Project>>(
             Method::GET,
@@ -33,7 +37,8 @@ pub async fn new_feature<'a>(
             None,
         )
         .await?;
-    let first = r.get(0).unwrap();
+    let first = r.iter().find(|p| p.name.eq(proj_name)).unwrap();
+    println!("找到的项目信息:{:#?}", first);
     let tmp_title = "title=".to_owned() + title;
     let query = Some(tmp_title.as_str());
     println!("开始创建 issue");
@@ -45,7 +50,8 @@ pub async fn new_feature<'a>(
             None,
         )
         .await?;
-    let branch = format!("ref=master&branch={}", format!("issue#{}", i.iid));
+    let tmp_branch = format!("issue#{}", i.iid);
+    let branch = format!("ref=master&branch={}", tmp_branch);
     let branch = Some(branch.as_str());
     println!("开始创建 分支");
     c.request::<Branch>(
@@ -55,7 +61,16 @@ pub async fn new_feature<'a>(
         None,
     )
     .await?;
-    println!("分支已创建成功，分支名{}", branch.unwrap());
+    println!("分支已创建成功，分支名{}", tmp_branch);
+    let origin_branch = format!("origin/{}", tmp_branch);
+    Command::new("git")
+        .arg("fetch")
+        .output()
+        .expect("命令执行错误，请手动拉取分支");
+    Command::new("git")
+        .args(["checkout", "-b", &origin_branch])
+        .output()
+        .expect("分支切换错误，请手动切换");
     Ok(())
 }
 
@@ -68,7 +83,7 @@ pub async fn issues<'a>(c: &'a mut GitRequestClient<'a>, proj_name: &str) -> Ser
             None,
         )
         .await?;
-    let first = r.get(0).unwrap();
+    let first = r.iter().find(|p| p.name.eq(proj_name)).unwrap();
     let list = c
         .request::<Vec<Issue>>(
             Method::GET,
