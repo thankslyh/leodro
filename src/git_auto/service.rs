@@ -73,7 +73,11 @@ pub async fn new_feature<'a>(
     Ok(())
 }
 
-pub async fn issues<'a>(c: &'a mut GitRequestClient<'a>, proj_name: &str) -> ServiceResult {
+pub async fn issues<'a>(
+    c: &'a mut GitRequestClient<'a>,
+    proj_name: &str,
+    keyword: Option<&'a str>,
+) -> ServiceResult {
     let mut sp = Spinner::new(SoccerHeader, format!("项目名 {} 查找 issues 中", proj_name));
     let r = c
         .request::<Vec<Project>>(
@@ -84,11 +88,16 @@ pub async fn issues<'a>(c: &'a mut GitRequestClient<'a>, proj_name: &str) -> Ser
         )
         .await?;
     let first = r.iter().find(|p| p.name.eq(proj_name)).unwrap();
+    let mut search_keyword = None;
+    if let Some(str) = keyword {
+        search_keyword = Some(format!("search={}", str))
+    }
+    let search_keyword = search_keyword.unwrap();
     let list = c
         .request::<Vec<Issue>>(
             Method::GET,
             &format!("/api/v4/projects/{}/issues", first.id),
-            None,
+            Some(search_keyword.as_str()),
             None,
         )
         .await?;

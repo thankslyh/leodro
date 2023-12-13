@@ -15,7 +15,7 @@ async fn main() -> leodro::service::ServiceResult {
                 .await?;
         }
         Action::Issues => {
-            leodro::service::issues(&mut git_req, conf.proj_name.as_str()).await?;
+            leodro::service::issues(&mut git_req, conf.proj_name.as_str(), cmd.val).await?;
         }
     }
     Ok(())
