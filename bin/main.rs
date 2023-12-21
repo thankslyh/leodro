@@ -11,8 +11,12 @@ async fn main() -> leodro::service::ServiceResult {
     let mut git_req = leodro::GitRequestClient::new(&conf.git_prefix, &conf.token);
     match cmd.action {
         Action::NewFeature => {
-            leodro::service::new_feature(&mut git_req, conf.proj_name.as_str(), cmd.val.unwrap())
-                .await?;
+            leodro::service::new_feature(
+                &mut git_req,
+                conf.proj_name.as_str(),
+                cmd.val.unwrap_or(""),
+            )
+            .await?;
         }
         Action::Issues => {
             leodro::service::issues(&mut git_req, conf.proj_name.as_str(), cmd.val).await?;

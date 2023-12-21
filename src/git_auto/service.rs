@@ -92,7 +92,7 @@ pub async fn issues<'a>(
     if let Some(str) = keyword {
         search_keyword = Some(format!("search={}", str))
     }
-    let search_keyword = search_keyword.unwrap();
+    let search_keyword = search_keyword.unwrap_or("".to_string());
     let list = c
         .request::<Vec<Issue>>(
             Method::GET,
